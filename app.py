@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'a-strong-secret-key-you-should-change'
 
 def save_prompt_for_training(full_data_string):
-    """Saves the complete data (user info + answers) in JSONL format."""
+    """Saves the complete data (user info + answers) in JSON format."""
     try:
         system_prompt = "You are Path, an expert career coach. A user has provided their details and answered a detailed questionnaire. Analyze their complete set of answers and provide a detailed career analysis."
         training_data = {
@@ -18,9 +18,9 @@ def save_prompt_for_training(full_data_string):
                 {"role": "user", "content": full_data_string}
             ]
         }
-        with open("path_training_prompts.jsonl", "a", encoding="utf-8") as f:
+        with open("path_training_prompts.json", "a", encoding="utf-8") as f:
             f.write(json.dumps(training_data) + "\n")
-        print("✅ Prompt data saved to path_training_prompts.jsonl")
+        print("✅ Prompt data saved to path_training_prompts.json")
     except Exception as e:
         print(f"❌ Error saving training data: {e}")
 
