@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Path - Your Personal Blueprint</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.7;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: #ffffff;
+            padding: 2em;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2em;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 1em;
+        }
+        header h1 {
+            color: #0056b3;
+            margin: 0;
+        }
+        .results-content {
+            font-size: 1.1em;
+        }
+        .results-content h3 {
+            color: #343a40;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 0.3em;
+            margin-top: 1.5em;
+        }
+        .results-content ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .results-content li {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 1em;
+            margin-bottom: 0.75em;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Your Personal Blueprint from Path</h1>
+        </header>
+
+        <div class="results-content">
+        <!-- 
+            This is a special Jinja2 tag. 
+            It will take the HTML-formatted response from the AI 
+            and render it safely on the page.
+        -->
+        {{ ai_response | safe }}
+    </div>
+
+    <div style="text-align: center; margin-top: 2em;">
+        <a href="{{ url_for('questionnaire') }}" style="text-decoration: none; color: var(--primary-color); font-weight: 600;">Take the Questionnaire Again</a>
+    </div>
+    </div>
+</body>
+</html>
+

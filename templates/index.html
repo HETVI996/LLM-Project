@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Path - Your Discovery Journey</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; color: #333; padding: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 2em; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        header { text-align: center; margin-bottom: 2em; border-bottom: 1px solid #e0e0e0; padding-bottom: 1em; }
+        header h1 { color: #0056b3; }
+        .progress-container { margin-bottom: 2em; background-color: #e9ecef; border-radius: 2em; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        .progress-bar { height: 18px; background-color: #007bff; width: 0%; border-radius: 2em; transition: width 0.4s ease-in-out; }
+        .question-block { margin-bottom: 2.5em; }
+        label.main-label { display: block; font-weight: 600; font-size: 1.1em; margin-bottom: 1em; color: #343a40; }
+        .choice-toggle { margin-bottom: 1em; }
+        .toggle-btn { background: #e9ecef; border: 1px solid #ced4da; padding: 0.5em 1em; cursor: pointer; border-radius: 4px; display: inline-block; margin-right: 5px; }
+        .toggle-btn.active { background: #007bff; color: white; border-color: #007bff; }
+        .input-area { display: none; margin-top: 1em; }
+        input[type="text"], input[type="number"], textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ced4da; font-size: 1em; box-sizing: border-box; }
+        .options-container { display: flex; flex-wrap: wrap; gap: 1em; }
+        
+        /* --- DESIGN IMPROVEMENT STARTS HERE --- */
+        .option-btn { 
+            background: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            padding: 0.7em 1.5em; 
+            border-radius: 8px; /* Changed from 2em to 8px for a more modern look */
+            cursor: pointer;
+            transition: all 0.2s ease-in-out; /* Added smooth transition */
+        }
+
+        .option-btn:hover {
+            background-color: #f1f3f5;
+            transform: translateY(-2px); /* Added subtle hover effect */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .option-btn.selected {
+            background-color: #e7f1ff;
+            color: #0056b3;
+            border-color: #007bff;
+            font-weight: 600;
+        }
+        /* --- DESIGN IMPROVEMENT ENDS HERE --- */
+
+        .likert-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1em; align-items: center; }
+        button[type="submit"] { display: block; width: 100%; background-color: #007bff; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 2em; }
+        button[type="submit"]:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Path - From Passion to Profession</h1>
+            <p>Answer these questions to add to the dataset.</p>
+        </header>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <form action="/submit" method="POST">
+
+            <!-- Question 1 -->
+            <div class="question-block">
+                <label class="main-label">1. The Bookstore Test : If you were in bookstore with unlimited time and money where do you instinctively walk to first?</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q1', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q1', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q1_answer" id="q1_answer" required>
+                <div id="q1_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q1', this, 'Fiction')">Fiction</div>
+                        <div class="option-btn" onclick="selectOption('q1', this, 'Science/Technology')">Science/Technology</div>
+                        <div class="option-btn" onclick="selectOption('q1', this, 'History')">History</div>
+                        <div class="option-btn" onclick="selectOption('q1', this, 'Self-Help')">Self-Help</div>
+                    </div>
+                </div>
+                <div id="q1_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q1', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="question-block">
+                <label class="main-label">2. The Curiosity Test : Outside work or school, what topics do you find yourself Googling or watching videos or reading about just for fun?</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q2', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q2', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q2_answer" id="q2_answer" required>
+                <div id="q2_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q2', this, 'Technology')">Technology</div>
+                        <div class="option-btn" onclick="selectOption('q2', this, 'Health')">Health</div>
+                        <div class="option-btn" onclick="selectOption('q2', this, 'Travel')">Travel</div>
+                        <div class="option-btn" onclick="selectOption('q2', this, 'Finance')">Finance</div>
+                    </div>
+                </div>
+                <div id="q2_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q2', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+            
+            <!-- Question 3 -->
+            <div class="question-block">
+                <label class="main-label">3. The Flow state : Describe an activity that makes you completely lose track of time</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q3', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q3', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q3_answer" id="q3_answer" required>
+                <div id="q3_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q3', this, 'Writing')">Writing</div>
+                        <div class="option-btn" onclick="selectOption('q3', this, 'Coding')">Coding</div>
+                        <div class="option-btn" onclick="selectOption('q3', this, 'Sports')">Sports</div>
+                        <div class="option-btn" onclick="selectOption('q3', this, 'Games')">Games</div>
+                    </div>
+                </div>
+                <div id="q3_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q3', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 4 -->
+            <div class="question-block">
+                <label class="main-label">4. Let’s tap into your earliest interests. Our childhood passions often hold clues to our innate talents. Looking back, what did you find love to do ?</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q4', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q4', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q4_answer" id="q4_answer" required>
+                <div id="q4_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q4', this, 'Building')">Building</div>
+                        <div class="option-btn" onclick="selectOption('q4', this, 'Storytelling')">Storytelling</div>
+                        <div class="option-btn" onclick="selectOption('q4', this, 'Organizing')">Organizing</div>
+                        <div class="option-btn" onclick="selectOption('q4', this, 'Exploring')">Exploring</div>
+                    </div>
+                </div>
+                <div id="q4_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q4', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 5 (Text-Only) -->
+            <div class="question-block">
+                <label class="main-label" for="q5_answer">5.Pride Project : Think about a project or accomplishment (personal or professional) you are genuinely proud of? What skills did you see?</label>
+                <textarea id="q5_answer" name="q5_answer" required rows="4" placeholder="e.g., Led a team project, built an app..."></textarea>
+            </div>
+            
+            <!-- Question 6 -->
+            <div class="question-block">
+                <label class="main-label" for="q6_answer">6. Hobbies: What are at least 3 hobbies that you enjoy?</label>
+                <textarea id="q6_answer" name="q6_answer" required rows="4" placeholder="e.g., painting, hiking, gaming..."></textarea>
+            </div>
+            
+            <!-- Question 7 -->
+            <div class="question-block">
+                <label class="main-label">7. The Energy Barometer : What conversations, tasks or subject leave you feeling energized or excited? Conversely, which one leave you feeling bored or drained?</label>
+                <textarea id="q7_answer" name="q7_answer" required rows="4" placeholder="Describe both energizing and draining activities..."></textarea>
+            </div>
+
+            <!-- Question 8 -->
+            <div class="question-block">
+                <label class="main-label">8. The Friend-Sourced skill : What do your friends or family consistently ask for help?</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q8', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q8', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q8_answer" id="q8_answer" required>
+                <div id="q8_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q8', this, 'Technology')">Technology</div>
+                        <div class="option-btn" onclick="selectOption('q8', this, 'Organizing')">Organizing</div>
+                        <div class="option-btn" onclick="selectOption('q8', this, 'Emotional Support')">Emotional Support</div>
+                        <div class="option-btn" onclick="selectOption('q8', this, 'Problem-Solving')">Problem-Solving</div>
+                    </div>
+                </div>
+                <div id="q8_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q8', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 9 (Likert Scale - No Toggle) -->
+            <div class="question-block">
+                <label class="main-label">9. Natural Ease : Which subjects or tasks in your studies or work felt easiest or most intuitive to you, even if they weren’t your absolute favorites? Give me likert scale for each from 1-10.</label>
+                <div class="likert-group">
+                    <label for="q9_mathematics">a. Mathematics</label>
+                    <input type="number" id="q9_mathematics" name="q9_mathematics" min="1" max="10" required placeholder="1-10">
+                    <label for="q9_any_language">b. Any language</label>
+                    <input type="number" id="q9_any_language" name="q9_any_language" min="1" max="10" required placeholder="1-10">
+                    <label for="q9_creativity">c. Creativity</label>
+                    <input type="number" id="q9_creativity" name="q9_creativity" min="1" max="10" required placeholder="1-10">
+                    <label for="q9_management">d. Management</label>
+                    <input type="number" id="q9_management" name="q9_management" min="1" max="10" required placeholder="1-10">
+                </div>
+            </div>
+
+            <!-- Question 10 -->
+            <div class="question-block">
+                <label class="main-label">10. The Problem-Solving role : When working in a group on difficult problem, what role do you naturally play?</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q10', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q10', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q10_answer" id="q10_answer" required>
+                <div id="q10_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q10', this, 'The idea generator : Brainstorming creative, out-of-box ideas.')">The idea generator : Brainstorming creative, out-of-box ideas.</div>
+                        <div class="option-btn" onclick="selectOption('q10', this, 'The orchestrator : Organizing plan and delegating tasks.')">The orchestrator : Organizing plan and delegating tasks.</div>
+                        <div class="option-btn" onclick="selectOption('q10', this, 'The detective : Researching information and finding the fact.')">The detective : Researching information and finding the fact.</div>
+                        <div class="option-btn" onclick="selectOption('q10', this, 'The Builder : Executing the plan and creating the final solution')">TThe Builder : Executing the plan and creating the final solution</div>
+                    </div>
+                </div>
+                <div id="q10_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q10', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 11 -->
+            <div class="question-block">
+                <label class="main-label">11. Work Rhythm: Do you prefer to:</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q11', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q11', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q11_answer" id="q11_answer" required>
+                <div id="q11_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q11', this, 'Deeply focus on 1 big project for long period of time?')">Deeply focus on 1 big project for long period of time?</div>
+                        <div class="option-btn" onclick="selectOption('q11', this, 'Enjoy the variety of juggling many smaller tasks at once?')">Enjoy the variety of juggling many smaller tasks at once?</div>
+                    </div>
+                </div>
+                <div id="q11_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q11', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 12 -->
+            <div class="question-block">
+                <label class="main-label">12. The Collaboration Spectrum: When do you do your best thinking?</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q12', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q12', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q12_answer" id="q12_answer" required>
+                <div id="q12_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q12', this, 'Brainstorming and Collaborating live with the team.')">Brainstorming and Collaborating live with the team.</div>
+                        <div class="option-btn" onclick="selectOption('q12', this, 'Working alone in quite space to think deeply')">Working alone in quite space to think deeply</div>
+                        <div class="option-btn" onclick="selectOption('q12', this, 'A Mix : Collaborating fo ideas, then working solo to excute.')">A Mix : Collaborating fo ideas, then working solo to excute.</div>
+                    </div>
+                </div>
+                <div id="q12_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q12', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 13 -->
+            <div class="question-block">
+                <label class="main-label">13. Structure vs Freedom: Which work environment sounds more appealing to you?</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q13', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q13', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q13_answer" id="q13_answer" required>
+                <div id="q13_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q13', this, 'A job with clear, predictable routines and well defined tasks')">A job with clear, predictable routines and well defined tasks</div>
+                        <div class="option-btn" onclick="selectOption('q13', this, 'One with a flexible schedule and freedom to experiment ')">One with a flexible schedule and freedom to experiment </div>
+                    </div>
+                </div>
+                <div id="q13_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q13', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 14 -->
+            <div class="question-block">
+                <label class="main-label">14. Decision-Making style : When making an important decision, do you primarily rely on ?</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q14', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q14', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q14_answer" id="q14_answer" required>
+                <div id="q14_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q14', this, '“Head” : Objective data, logic and pros-cons')">“Head” : Objective data, logic and pros-cons</div>
+                        <div class="option-btn" onclick="selectOption('q14', this, '“Heart” : Intuition, personal values and the impact on people')">“Heart” : Intuition, personal values and the impact on people</div>
+                    </div>
+                </div>
+                <div id="q14_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q14', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 15 (Text-Only) -->
+            <div class="question-block">
+                <label class="main-label" for="q15_answer">15. The Non-Negotiable test : Imagine 2 job offers. Job A has a significantly higher salary. Job B has something else you deeply value (e.g., work life balance, remote flexibility, etc). Which one you choose and why?</label>
+                <textarea id="q15_answer" name="q15_answer" required rows="4" placeholder="Job A or B and why"></textarea>
+            </div>
+
+            <!-- Question 16 (Text-Only) -->
+            <div class="question-block">
+                <label class="main-label" for="q16_answer">16. The No-Money Test: If money were no object, what problem would you solve?</label>
+                <textarea id="q16_answer" name="q16_answer" required rows="4" placeholder="e.g., climate change, education, poverty..."></textarea>
+            </div>
+
+            <!-- Question 17 -->
+            <div class="question-block">
+                <label class="main-label">17. Contribution vs Creation: Is it more fulfilling for you to:</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q17', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q17', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q17_answer" id="q17_answer" required>
+                <div id="q17_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q17', this, 'Directly help, teach or serve people?')">Directly help, teach or serve people?</div>
+                        <div class="option-btn" onclick="selectOption('q17', this, 'Create something new that people can use or experience?')">Create something new that people can use or experience?</div>
+                    </div>
+                </div>
+                <div id="q17_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q17', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 18 (Text-Only) -->
+            <div class="question-block">
+                <label class="main-label" for="q18_answer">18. Defining Success: At the end of your life, what needs to be true for it to be a success?</label>
+                <textarea id="q18_answer" name="q18_answer" required rows="4" placeholder="Think beyond just your job title or salary..."></textarea>
+            </div>
+
+            <!-- Question 19 (Text-Only) -->
+            <div class="question-block">
+                <label class="main-label" for="q19_answer">19. The Party Test: What one feeling do you want people to associate with your career story in 20 years?</label>
+                <textarea id="q19_answer" name="q19_answer" required rows="4" placeholder="e.g., Innovative, helpful, creative..."></textarea>
+            </div>
+
+            <!-- Question 20 -->
+            <div class="question-block">
+                <label class="main-label">20. The Regret Minimization Framework : Choose which long-term regret you would rather avoid:</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q20', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q20', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q20_answer" id="q20_answer" required>
+                <div id="q20_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q20', this, 'The regret of not taking a major risk for higher reward')">The regret of not taking a major risk for higher reward</div>
+                        <div class="option-btn" onclick="selectOption('q20', this, 'The regret of not choosing a path that guaranteed stability and comfort')">The regret of not choosing a path that guaranteed stability and comfort</div>
+                    </div>
+                </div>
+                <div id="q20_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q20', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+            
+            <!-- Question 21 (Text-Only) -->
+            <div class="question-block">
+                <label class="main-label" for="q21_answer">21. The Ideal Week Blueprint: Design your ideal work week.</label>
+                <textarea id="q21_answer" name="q21_answer" required rows="4" placeholder="Specify hours, location, travel, and pace..."></textarea>
+            </div>
+
+            <!-- Question 22 -->
+            <div class="question-block">
+                <label class="main-label">22. Work Environment Preference: Select your optimal work environment:</label>
+                <div class="choice-toggle">
+                    <span class="toggle-btn" onclick="showInput('q22', 'options', this)">Help from Path</span>
+                    <span class="toggle-btn" onclick="showInput('q22', 'text', this)">Type Here</span>
+                </div>
+                <input type="hidden" name="q22_answer" id="q22_answer" required>
+                <div id="q22_options_area" class="input-area">
+                    <div class="options-container">
+                        <div class="option-btn" onclick="selectOption('q22', this, 'Structured corporate')">Structured corporate</div>
+                        <div class="option-btn" onclick="selectOption('q22', this, 'Collaborative startup')">Collaborative startup</div>
+                        <div class="option-btn" onclick="selectOption('q22', this, 'Solo, quiet work')">Solo, quiet work</div>
+                        <div class="option-btn" onclick="selectOption('q22', this, 'Dynamic, field-based')">Dynamic, field-based</div>
+                    </div>
+                </div>
+                <div id="q22_text_area" class="input-area">
+                    <input type="text" oninput="updateTextAnswer('q22', this)" placeholder="Write your own answer...">
+                </div>
+            </div>
+
+            <!-- Question 23 (Text-Only) -->
+            <div class="question-block">
+                <label class="main-label" for="q23_answer">23. Defining Failure: What would a significant failure look like, and how would you recover?</label>
+                <textarea id="q23_answer" name="q23_answer" required rows="4" placeholder="Describe a potential failure and your recovery plan..."></textarea>
+            </div>
+
+            <button type="submit" onclick="document.getElementById('pathForm').submit();">Submit My Answers</button>
+        </form>
+    </div>
+
+        <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const questionBlocks = document.querySelectorAll('.question-block');
+        const totalQuestions = questionBlocks.length;
+        const progressBar = document.getElementById('progressBar');
+        const formElements = document.querySelectorAll('input, textarea, .option-btn, .toggle-btn');
+        function updateProgress() {
+            let answeredCount = 0;
+            questionBlocks.forEach(block => {
+                const answerInput = block.querySelector('input[type="hidden"], input[type="number"], textarea, input[type="text"]');
+                if (answerInput && answerInput.value.trim() !== '') {
+                    answeredCount++;
+                }
+            });
+            const progressPercentage = (answeredCount / totalQuestions) * 100;
+            progressBar.style.width = progressPercentage + '%';
+        }
+        formElements.forEach(element => {
+            const eventType = element.classList.contains('option-btn') || element.classList.contains('toggle-btn') ? 'click' : 'input';
+            element.addEventListener(eventType, updateProgress);
+        });
+        updateProgress();
+    });
+
+    function showInput(questionId, inputType, clickedButton) {
+        const block = clickedButton.closest('.question-block');
+        const textInput = block.querySelector('input[type="text"]');
+        if (textInput) {
+            textInput.value = '';
+        }
+        const answerInput = document.getElementById(`${questionId}_answer`);
+        if (answerInput) {
+            answerInput.value = '';
+        }
+        block.querySelectorAll('.input-area').forEach(area => {
+            area.style.display = 'none';
+        });
+        const targetArea = block.querySelector(`#${questionId}_${inputType}_area`);
+        if (targetArea) {
+            targetArea.style.display = 'block';
+        }
+        block.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        clickedButton.classList.add('active');
+    }
+
+    function selectOption(questionId, clickedOption, value) {
+        document.getElementById(`${questionId}_answer`).value = value;
+        const optionsContainer = clickedOption.closest('.options-container');
+        optionsContainer.querySelectorAll('.option-btn').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        clickedOption.classList.add('selected');
+    }
+
+    function updateTextAnswer(questionId, textInput) {
+        document.getElementById(`${questionId}_answer`).value = textInput.value;
+    }
+</script>
+</body>
+</html>
