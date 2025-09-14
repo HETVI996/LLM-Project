@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, session, redirect, url_for
 from dotenv import load_dotenv
 
 load_dotenv()
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
 # A secret key is required to use sessions for the login
 app.config['SECRET_KEY'] = 'a-strong-secret-key-you-should-change'
 
@@ -18,7 +18,7 @@ def save_prompt_for_training(full_data_string):
                 {"role": "user", "content": full_data_string}
             ]
         }
-        with open("path_training_prompts.json", "a", encoding="utf-8") as f:
+        with open("static/path_training_prompts.json", "a", encoding="utf-8") as f:
             f.write(json.dumps(training_data) + "\n")
         print("✅ Prompt data saved to path_training_prompts.json")
     except Exception as e:
