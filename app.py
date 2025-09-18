@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, session, redirect, url_for
 from dotenv import load_dotenv
 
 load_dotenv()
+
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
 # A secret key is required to use sessions for the login
 app.config['SECRET_KEY'] = 'a-strong-secret-key-you-should-change'
