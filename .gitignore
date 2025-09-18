@@ -2,3 +2,4 @@ __pycache__
 venv
 .env
 path_training_prompts.json
+.git.zip
