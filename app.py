@@ -1,29 +1,22 @@
 import os
-import json
 from flask import Flask, render_template, request, session, redirect, url_for
 from dotenv import load_dotenv
+from models import db, User, Response # We now import from models.py
 
 load_dotenv()
 
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
-# A secret key is required to use sessions for the login
-app.config['SECRET_KEY'] = 'a-strong-secret-key-you-should-change'
+# Configure the secret key and the database URI
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-strong-secret-key-you-should-change')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///questionnaire.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-def save_prompt_for_training(full_data_string):
-    """Saves the complete data (user info + answers) in JSON format."""
-    try:
-        system_prompt = "You are Path, an expert career coach. A user has provided their details and answered a detailed questionnaire. Analyze their complete set of answers and provide a detailed career analysis."
-        training_data = {
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": full_data_string}
-            ]
-        }
-        with open("static/path_training_prompts.json", "a", encoding="utf-8") as f:
-            f.write(json.dumps(training_data) + "\n")
-        print("✅ Prompt data saved to path_training_prompts.json")
-    except Exception as e:
-        print(f"❌ Error saving training data: {e}")
+# Initialize the database with our app
+db.init_app(app)
+
+# A command to create the database tables
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 def home():
@@ -33,42 +26,42 @@ def home():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Save user details into a session cookie
         session['user_details'] = {
             "name": request.form.get('name'),
             "age": request.form.get('age'),
             "gender": request.form.get('gender')
         }
-        # Redirect to the main questionnaire
         return redirect(url_for('questionnaire'))
     return render_template('login.html')
 
 @app.route('/questionnaire')
 def questionnaire():
     """Serves the main questionnaire page."""
-    # If a user tries to go here directly, send them back to login
     if 'user_details' not in session:
         return redirect(url_for('login'))
     return render_template('index.html')
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    """Processes the questionnaire and saves all data to a file."""
+    """Processes the questionnaire and saves all data to the database."""
     if 'user_details' not in session:
         return redirect(url_for('login'))
 
-    # Retrieve user details from the session
     user_details = session.pop('user_details', {})
     
-    # Start building the final data string with user details
-    user_data_parts = [
-        f"Name: {user_details.get('name')}",
-        f"Age: {user_details.get('age')}",
-        f"Gender: {user_details.get('gender')}"
-    ]
+    # Create a new user record
+    new_user = User(
+        name=user_details.get('name'),
+        age=user_details.get('age'),
+        gender=user_details.get('gender')
+    )
+    db.session.add(new_user)
+    db.session.commit() # Save the user to get their ID
     
-    # Loop for the original 23 questions from the form
+    # Loop through all questions and save each response
     for i in range(1, 24):
+        question = f"Question {i}"
+        answer = ""
         if i == 9: 
             keys = ['mathematics', 'any_language', 'creativity', 'management']
             ratings = {key: request.form.get(f'q9_{key}', '0') for key in keys}
@@ -77,14 +70,13 @@ def submit():
             answer = request.form.get(f'q{i}_answer')
         
         if answer:
-            user_data_parts.append(f"Question {i}: {answer}")
+            # Create a new response record linked to the user
+            new_response = Response(question=question, answer=answer, user_id=new_user.id)
+            db.session.add(new_response)
 
-    final_data_string = "\n".join(user_data_parts)
-    
-    save_prompt_for_training(final_data_string)
+    db.session.commit() # Save all the responses
     
     return render_template('thank_you.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
-
