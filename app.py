@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # ----------------- LOAD ENV -----------------
 load_dotenv()
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///data.db')
 SECRET_KEY = os.environ.get('SECRET_KEY', 'mysecret123')
 CSV_DOWNLOAD_PASSWORD = os.environ.get('CSV_DOWNLOAD_PASSWORD', 'mysecret123')
 
@@ -44,7 +44,6 @@ def login():
     age = request.form.get('age')
     gender = request.form.get('gender')
 
-    # Save in session temporarily
     session['name'] = name
     session['age'] = age
     session['gender'] = gender
@@ -57,26 +56,21 @@ def questionnaire():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    # Get basic user info from session
     name = session.get('name')
     age = session.get('age')
     gender = session.get('gender')
 
-    # Collect all 23 answers (match current HTML "_answer" names)
     answers = [request.form.get(f'q{i}_answer') for i in range(1, 24)]
 
-    # Save user
     user = User(name=name, age=age, gender=gender)
     db.session.add(user)
     db.session.commit()
 
-    # Save answers
     for ans in answers:
         answer = Answer(user_id=user.id, answer=ans)
         db.session.add(answer)
     db.session.commit()
 
-    # Clear session
     session.pop('name', None)
     session.pop('age', None)
     session.pop('gender', None)
@@ -86,31 +80,32 @@ def submit():
 # ----------------- ADMIN CSV DOWNLOAD -----------------
 @app.route('/admin/download_csv')
 def download_csv():
-    password = request.args.get('password')
-    if password != CSV_DOWNLOAD_PASSWORD:
-        return "Unauthorized: wrong password", 401
+    try:
+        password = request.args.get('password')
+        if password != CSV_DOWNLOAD_PASSWORD:
+            return "Unauthorized: wrong password", 401
 
-    output = io.StringIO()
-    writer = csv.writer(output)
+        output = io.StringIO()
+        writer = csv.writer(output)
 
-    # CSV header
-    header = ["User ID", "Name", "Age", "Gender"] + [f"Q{i}" for i in range(1, 24)]
-    writer.writerow(header)
+        header = ["User ID", "Name", "Age", "Gender"] + [f"Q{i}" for i in range(1, 24)]
+        writer.writerow(header)
 
-    users = User.query.all()
-    for user in users:
-        row = [user.id, user.name, user.age, user.gender]
-        answers = [a.answer for a in user.responses]
-        while len(answers) < 23:
-            answers.append("")
-        row.extend(answers)
-        writer.writerow(row)
+        users = User.query.all()
+        for user in users:
+            row = [user.id, user.name, user.age, user.gender]
+            answers = [a.answer for a in user.responses]
+            row.extend(answers + [""] * (23 - len(answers)))
+            writer.writerow(row)
 
-    output.seek(0)
-    return send_file(io.BytesIO(output.getvalue().encode()),
-                     mimetype="text/csv",
-                     as_attachment=True,
-                     download_name="responses.csv")
+        output.seek(0)
+        return send_file(io.BytesIO(output.getvalue().encode()),
+                         mimetype="text/csv",
+                         as_attachment=True,
+                         download_name="responses.csv")
+    except Exception as e:
+        # Return the error message so you can see what went wrong
+        return f"Error generating CSV: {e}", 500
 
 # ----------------- ADMIN PANEL -----------------
 @app.route('/admin')
@@ -122,4 +117,6 @@ def admin_panel():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+
+    port = int(os.environ.get('PORT', 5000))  # Render sets this automatically
+    app.run(host='0.0.0.0', port=port)
