@@ -1,11 +1,11 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, send_file
+from flask import Flask, render_template, request, send_file, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 import io
 import csv
+from dotenv import load_dotenv
 
 # ----------------- LOAD ENV -----------------
-from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -35,24 +35,51 @@ class Answer(db.Model):
 
 # ----------------- ROUTES -----------------
 @app.route('/')
-def index():
-    return render_template('index.html')
+def home():
+    return render_template('login.html')  # Show login page first
 
-@app.route('/submit', methods=['POST'])
-def submit():
+@app.route('/login', methods=['POST'])
+def login():
     name = request.form.get('name')
     age = request.form.get('age')
     gender = request.form.get('gender')
-    answers = [request.form.get(f'q{i}') for i in range(1, 24)]
 
+    # Save in session temporarily
+    session['name'] = name
+    session['age'] = age
+    session['gender'] = gender
+
+    return redirect(url_for('questionnaire'))
+
+@app.route('/questionnaire')
+def questionnaire():
+    return render_template('index.html')  # Show main questionnaire
+
+@app.route('/submit', methods=['POST'])
+def submit():
+    # Get basic user info from session
+    name = session.get('name')
+    age = session.get('age')
+    gender = session.get('gender')
+
+    # Collect all 23 answers (match current HTML "_answer" names)
+    answers = [request.form.get(f'q{i}_answer') for i in range(1, 24)]
+
+    # Save user
     user = User(name=name, age=age, gender=gender)
     db.session.add(user)
     db.session.commit()
 
+    # Save answers
     for ans in answers:
         answer = Answer(user_id=user.id, answer=ans)
         db.session.add(answer)
     db.session.commit()
+
+    # Clear session
+    session.pop('name', None)
+    session.pop('age', None)
+    session.pop('gender', None)
 
     return render_template('thank_you.html')
 
@@ -65,7 +92,7 @@ def download_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    
+
     # CSV header
     header = ["User ID", "Name", "Age", "Gender"] + [f"Q{i}" for i in range(1, 24)]
     writer.writerow(header)
@@ -93,5 +120,6 @@ def admin_panel():
 
 # ----------------- RUN APP -----------------
 if __name__ == '__main__':
-    db.create_all()
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
