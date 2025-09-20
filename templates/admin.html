@@ -4,57 +4,22 @@
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f7f9fb;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            max-width: 1200px;
-            margin: 20px auto;
-            background: white;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        th {
-            background: #007BFF;
-            color: white;
-        }
-        tr:nth-child(even) {
-            background: #f2f2f2;
-        }
-        .download {
-            display: block;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .download a {
-            background: #28a745;
-            color: white;
-            text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-        }
-        .download a:hover {
-            background: #218838;
-        }
+        body { font-family: Arial, sans-serif; background: #f7f9fb; padding: 20px; }
+        h1 { text-align: center; color: #333; }
+        table { border-collapse: collapse; width: 100%; max-width: 1200px; margin: 20px auto; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #007BFF; color: white; }
+        tr:nth-child(even) { background: #f2f2f2; }
+        .download { display: block; text-align: center; margin: 20px 0; }
+        .download a { background: #28a745; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; }
+        .download a:hover { background: #218838; }
     </style>
 </head>
 <body>
     <h1>All Form Submissions</h1>
 
     <div class="download">
-        <a href="{{ url_for('download_csv') }}">Download CSV</a>
+        <a href="{{ url_for('download_csv') }}?password=admin123">Download CSV</a>
     </div>
 
     {% if users %}
@@ -65,9 +30,7 @@
                     <th>Name</th>
                     <th>Age</th>
                     <th>Gender</th>
-                    {% for i in range(1,24) %}
-                        <th>Q{{ i }}</th>
-                    {% endfor %}
+                    {% for i in range(1, 24) %}<th>Q{{ i }}</th>{% endfor %}
                 </tr>
             </thead>
             <tbody>

@@ -26,6 +26,7 @@ class User(db.Model):
     name = db.Column(db.String(100))
     age = db.Column(db.Integer)
     gender = db.Column(db.String(10))
+    responses = db.relationship('Answer', backref='user', lazy=True)
 
 class Answer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -55,9 +56,9 @@ def submit():
 
     return render_template('thank_you.html')
 
-# ----------------- SECURE CSV DOWNLOAD -----------------
-@app.route("/admin/download_csv_secure")
-def download_csv_secure():
+# ----------------- ADMIN CSV DOWNLOAD -----------------
+@app.route('/admin/download_csv')
+def download_csv():
     password = request.args.get('password')
     if password != CSV_DOWNLOAD_PASSWORD:
         return "Unauthorized: wrong password", 401
@@ -72,8 +73,7 @@ def download_csv_secure():
     users = User.query.all()
     for user in users:
         row = [user.id, user.name, user.age, user.gender]
-        responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
-        answers = [r.answer for r in responses]
+        answers = [a.answer for a in user.responses]
         while len(answers) < 23:
             answers.append("")
         row.extend(answers)
@@ -84,6 +84,12 @@ def download_csv_secure():
                      mimetype="text/csv",
                      as_attachment=True,
                      download_name="responses.csv")
+
+# ----------------- ADMIN PANEL -----------------
+@app.route('/admin')
+def admin_panel():
+    users = User.query.all()
+    return render_template('admin.html', users=users)
 
 # ----------------- RUN APP -----------------
 if __name__ == '__main__':
