@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- The title will be dynamic for each page -->
+    <title>{% block title %}Path{% endblock %}</title>
+    <!-- Link to our new stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Path</h1>
+            <p>Your Personal Career Discovery Journey</p>
+        </div>
+        <!-- This block will be replaced by the content of other pages -->
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
