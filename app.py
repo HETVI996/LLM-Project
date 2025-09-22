@@ -6,25 +6,31 @@ from io import StringIO
 import csv
 
 # -------------------- LOAD ENV VARIABLES --------------------
+# Load environment variables from a .env file
 load_dotenv()
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-strong-secret-key')
 
 # -------------------- DATABASE CONFIG --------------------
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://pathuser:SIH123@localhost:5432/pathdb'
+# Get the database URL from environment variables for better security
+# Fallback to a default SQLite DB if not set (for local development)
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///instance/questionnaire.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize DB
 db = SQLAlchemy(app)
 
 # -------------------- DATABASE MODELS --------------------
+# These models define the structure of your database tables.
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     age = db.Column(db.Integer, nullable=False)
     gender = db.Column(db.String(50), nullable=False)
-    responses = db.relationship('Answer', backref='user', lazy=True)
+    # This relationship automatically links a User to all their Answers.
+    responses = db.relationship('Answer', backref='user', lazy=True, cascade="all, delete-orphan")
 
 class Answer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -32,9 +38,6 @@ class Answer(db.Model):
     answer = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-# Create tables
-with app.app_context():
-    db.create_all()
 
 # -------------------- ROUTES --------------------
 @app.route('/')
@@ -66,9 +69,13 @@ def submit():
     user_details = session.pop('user_details', {})
 
     # Save user
+    # FIX: Handle empty age string to prevent ValueError
+    age_str = user_details.get('age')
+    age = int(age_str) if age_str and age_str.isdigit() else 0
+    
     new_user = User(
         name=user_details.get('name'),
-        age=int(user_details.get('age', 0)),
+        age=age,
         gender=user_details.get('gender')
     )
     db.session.add(new_user)
@@ -90,7 +97,8 @@ def submit():
         else:
             answer = request.form.get(f'q{i}_answer', '')
 
-        if answer.strip():
+        # Only save if there is an actual answer
+        if answer and answer.strip():
             response = Answer(question=question, answer=answer, user_id=new_user.id)
             db.session.add(response)
 
@@ -100,13 +108,9 @@ def submit():
 # -------------------- ADMIN DASHBOARD --------------------
 @app.route('/admin')
 def admin():
-    # Fetch all users
-    users = User.query.all()
-
-    # Attach responses explicitly
-    for user in users:
-        user.responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
-
+    # Fetch all users. The 'responses' for each user will be loaded automatically
+    # by SQLAlchemy when accessed in the template thanks to the relationship.
+    users = User.query.order_by(User.id).all()
     return render_template('admin.html', users=users)
 
 
@@ -120,18 +124,19 @@ def download_csv():
     header = ["User ID", "Name", "Age", "Gender"] + [f"Q{i}" for i in range(1, 24)]
     writer.writerow(header)
 
-    # Fetch users and responses
-    users = User.query.all()
+    # Fetch users and their responses more efficiently
+    users = User.query.order_by(User.id).all()
     for user in users:
+        # The 'user.responses' are loaded automatically by SQLAlchemy
+        answers_dict = {r.question: r.answer for r in user.responses}
+        
         row = [user.id, user.name, user.age, user.gender]
-
-        responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
-        answers = [r.answer for r in responses]
-
-        while len(answers) < 23:
-            answers.append("")
-
-        row.extend(answers)
+        
+        # Add answers in the correct order
+        for i in range(1, 24):
+            question = f"Question {i}"
+            row.append(answers_dict.get(question, ""))
+            
         writer.writerow(row)
 
     response = Response(output.getvalue(), mimetype="text/csv")
@@ -141,3 +146,4 @@ def download_csv():
 # -------------------- RUN APP --------------------
 if __name__ == '__main__':
     app.run(debug=True)
+
