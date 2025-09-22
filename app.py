@@ -6,13 +6,18 @@ from io import StringIO
 import csv
 
 # -------------------- LOAD ENV VARIABLES --------------------
+# Load local .env if exists (optional, for development)
 load_dotenv()
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+
+# -------------------- APP CONFIG --------------------
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-strong-secret-key')
 
-# -------------------- DATABASE CONFIG --------------------
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://pathuser:SIH123@localhost:5432/pathdb'
+# Use DATABASE_URL from environment variables (Render) or fallback to local
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL', 'postgresql://pathuser:SIH123@localhost:5432/pathdb'
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize DB
@@ -32,7 +37,7 @@ class Answer(db.Model):
     answer = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-# Create tables
+# -------------------- CREATE TABLES --------------------
 with app.app_context():
     db.create_all()
 
@@ -100,19 +105,26 @@ def submit():
 # -------------------- ADMIN DASHBOARD --------------------
 @app.route('/admin')
 def admin():
+    admin_key = os.environ.get('ADMIN_KEY', 'supersecret123')
+    provided_key = request.args.get('key', '')
+    if provided_key != admin_key:
+        return "Unauthorized", 401
+
     # Fetch all users
     users = User.query.all()
-
-    # Attach responses explicitly
     for user in users:
         user.responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
 
     return render_template('admin.html', users=users)
 
-
 # -------------------- CSV DOWNLOAD --------------------
 @app.route("/download_csv")
 def download_csv():
+    admin_key = os.environ.get('ADMIN_KEY', 'supersecret123')
+    provided_key = request.args.get('key', '')
+    if provided_key != admin_key:
+        return "Unauthorized", 401
+
     output = StringIO()
     writer = csv.writer(output)
 
