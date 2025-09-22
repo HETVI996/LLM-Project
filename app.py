@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, session, redirect, url_for, Response
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from io import StringIO
 import csv
 
@@ -17,8 +18,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize DB
+# Initialize DB + Migrate
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # -------------------- DATABASE MODELS --------------------
 class User(db.Model):
@@ -30,13 +32,9 @@ class User(db.Model):
 
 class Answer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    question = db.Column(db.String(255), nullable=False)
+    question = db.Column(db.String(255), nullable=False)  # new column
     answer = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
-# -------------------- CREATE TABLES --------------------
-with app.app_context():
-    db.create_all()
 
 # -------------------- ROUTES --------------------
 @app.route('/')
@@ -73,7 +71,7 @@ def submit():
         gender=user_details.get('gender')
     )
     db.session.add(new_user)
-    db.session.commit()  # commit to generate new_user.id
+    db.session.commit()
 
     for i in range(1, 24):
         question = f"Question {i}"
