@@ -1,122 +1,143 @@
 import os
-from flask import Flask, render_template, request, send_file, session, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
-import io
-import csv
+from flask import Flask, render_template, request, session, redirect, url_for, Response
 from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
+from io import StringIO
+import csv
 
-# ----------------- LOAD ENV -----------------
+# -------------------- LOAD ENV VARIABLES --------------------
 load_dotenv()
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///data.db')
-SECRET_KEY = os.environ.get('SECRET_KEY', 'mysecret123')
-CSV_DOWNLOAD_PASSWORD = os.environ.get('CSV_DOWNLOAD_PASSWORD', 'mysecret123')
+app = Flask(__name__, template_folder='templates', static_folder='static')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-strong-secret-key')
 
-# ----------------- FLASK APP -----------------
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+# -------------------- DATABASE CONFIG --------------------
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://pathuser:SIH123@localhost:5432/pathdb'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = SECRET_KEY
 
+# Initialize DB
 db = SQLAlchemy(app)
 
-# ----------------- MODELS -----------------
+# -------------------- DATABASE MODELS --------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    age = db.Column(db.Integer)
-    gender = db.Column(db.String(10))
+    name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    gender = db.Column(db.String(50), nullable=False)
     responses = db.relationship('Answer', backref='user', lazy=True)
 
 class Answer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    answer = db.Column(db.String(500))
+    question = db.Column(db.String(255), nullable=False)
+    answer = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-# ----------------- ROUTES -----------------
+# Create tables
+with app.app_context():
+    db.create_all()
+
+# -------------------- ROUTES --------------------
 @app.route('/')
 def home():
-    return render_template('login.html')  # Show login page first
+    return redirect(url_for('login'))
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    name = request.form.get('name')
-    age = request.form.get('age')
-    gender = request.form.get('gender')
+    if request.method == 'POST':
+        session['user_details'] = {
+            "name": request.form.get('name'),
+            "age": request.form.get('age'),
+            "gender": request.form.get('gender')
+        }
+        return redirect(url_for('questionnaire'))
+    return render_template('login.html')
 
-    session['name'] = name
-    session['age'] = age
-    session['gender'] = gender
-
-    return redirect(url_for('questionnaire'))
-
-@app.route('/questionnaire')
+@app.route('/questionnaire', methods=['GET', 'POST'])
 def questionnaire():
-    return render_template('index.html')  # Show main questionnaire
+    if 'user_details' not in session:
+        return redirect(url_for('login'))
+    return render_template('index.html')
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    name = session.get('name')
-    age = session.get('age')
-    gender = session.get('gender')
+    if 'user_details' not in session:
+        return redirect(url_for('login'))
 
-    answers = [request.form.get(f'q{i}_answer') for i in range(1, 24)]
+    user_details = session.pop('user_details', {})
 
-    user = User(name=name, age=age, gender=gender)
-    db.session.add(user)
+    # Save user
+    new_user = User(
+        name=user_details.get('name'),
+        age=int(user_details.get('age', 0)),
+        gender=user_details.get('gender')
+    )
+    db.session.add(new_user)
+    db.session.commit()  # commit to generate new_user.id
+
+    # Save responses
+    for i in range(1, 24):
+        question = f"Question {i}"
+
+        if i == 9:  # Special handling for Q9
+            keys = ['mathematics', 'any_language', 'creativity', 'management']
+            ratings = {key: request.form.get(f'q9_{key}', '0') for key in keys}
+            answer = (
+                f"Math: {ratings['mathematics']}/10, "
+                f"Language: {ratings['any_language']}/10, "
+                f"Creativity: {ratings['creativity']}/10, "
+                f"Management: {ratings['management']}/10"
+            )
+        else:
+            answer = request.form.get(f'q{i}_answer', '')
+
+        if answer.strip():
+            response = Answer(question=question, answer=answer, user_id=new_user.id)
+            db.session.add(response)
+
     db.session.commit()
-
-    for ans in answers:
-        answer = Answer(user_id=user.id, answer=ans)
-        db.session.add(answer)
-    db.session.commit()
-
-    session.pop('name', None)
-    session.pop('age', None)
-    session.pop('gender', None)
-
     return render_template('thank_you.html')
 
-# ----------------- ADMIN CSV DOWNLOAD -----------------
-@app.route('/admin/download_csv')
-def download_csv():
-    try:
-        password = request.args.get('password')
-        if password != CSV_DOWNLOAD_PASSWORD:
-            return "Unauthorized: wrong password", 401
-
-        output = io.StringIO()
-        writer = csv.writer(output)
-
-        header = ["User ID", "Name", "Age", "Gender"] + [f"Q{i}" for i in range(1, 24)]
-        writer.writerow(header)
-
-        users = User.query.all()
-        for user in users:
-            row = [user.id, user.name, user.age, user.gender]
-            answers = [a.answer for a in user.responses]
-            row.extend(answers + [""] * (23 - len(answers)))
-            writer.writerow(row)
-
-        output.seek(0)
-        return send_file(io.BytesIO(output.getvalue().encode()),
-                         mimetype="text/csv",
-                         as_attachment=True,
-                         download_name="responses.csv")
-    except Exception as e:
-        # Return the error message so you can see what went wrong
-        return f"Error generating CSV: {e}", 500
-
-# ----------------- ADMIN PANEL -----------------
+# -------------------- ADMIN DASHBOARD --------------------
 @app.route('/admin')
-def admin_panel():
+def admin():
+    # Fetch all users
     users = User.query.all()
+
+    # Attach responses explicitly
+    for user in users:
+        user.responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
+
     return render_template('admin.html', users=users)
 
-# ----------------- RUN APP -----------------
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
 
-    port = int(os.environ.get('PORT', 5000))  # Render sets this automatically
-    app.run(host='0.0.0.0', port=port)
+# -------------------- CSV DOWNLOAD --------------------
+@app.route("/download_csv")
+def download_csv():
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # CSV Header
+    header = ["User ID", "Name", "Age", "Gender"] + [f"Q{i}" for i in range(1, 24)]
+    writer.writerow(header)
+
+    # Fetch users and responses
+    users = User.query.all()
+    for user in users:
+        row = [user.id, user.name, user.age, user.gender]
+
+        responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
+        answers = [r.answer for r in responses]
+
+        while len(answers) < 23:
+            answers.append("")
+
+        row.extend(answers)
+        writer.writerow(row)
+
+    response = Response(output.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=responses.csv"
+    return response
+
+# -------------------- RUN APP --------------------
+if __name__ == '__main__':
+    app.run(debug=True)
