@@ -6,15 +6,12 @@ from io import StringIO
 import csv
 
 # -------------------- LOAD ENV VARIABLES --------------------
-# Load local .env if exists (optional, for development)
 load_dotenv()
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # -------------------- APP CONFIG --------------------
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-strong-secret-key')
-
-# Use DATABASE_URL from environment variables (Render) or fallback to local
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 'postgresql://pathuser:SIH123@localhost:5432/pathdb'
 )
@@ -70,7 +67,6 @@ def submit():
 
     user_details = session.pop('user_details', {})
 
-    # Save user
     new_user = User(
         name=user_details.get('name'),
         age=int(user_details.get('age', 0)),
@@ -79,11 +75,10 @@ def submit():
     db.session.add(new_user)
     db.session.commit()  # commit to generate new_user.id
 
-    # Save responses
     for i in range(1, 24):
         question = f"Question {i}"
 
-        if i == 9:  # Special handling for Q9
+        if i == 9:
             keys = ['mathematics', 'any_language', 'creativity', 'management']
             ratings = {key: request.form.get(f'q9_{key}', '0') for key in keys}
             answer = (
@@ -102,53 +97,61 @@ def submit():
     db.session.commit()
     return render_template('thank_you.html')
 
+# -------------------- ADMIN LOGIN --------------------
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    error = None
+    admin_key = os.environ.get('ADMIN_KEY', 'supersecret123')
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == admin_key:
+            session['admin_logged_in'] = True
+            return redirect(url_for('admin_dashboard'))
+        else:
+            error = "Incorrect password"
+    return render_template('admin_login.html', error=error)
+
 # -------------------- ADMIN DASHBOARD --------------------
 @app.route('/admin')
-def admin():
-    admin_key = os.environ.get('ADMIN_KEY', 'supersecret123')
-    provided_key = request.args.get('key', '')
-    if provided_key != admin_key:
-        return "Unauthorized", 401
+def admin_dashboard():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
 
-    # Fetch all users
     users = User.query.all()
     for user in users:
         user.responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
-
     return render_template('admin.html', users=users)
 
 # -------------------- CSV DOWNLOAD --------------------
 @app.route("/download_csv")
 def download_csv():
-    admin_key = os.environ.get('ADMIN_KEY', 'supersecret123')
-    provided_key = request.args.get('key', '')
-    if provided_key != admin_key:
-        return "Unauthorized", 401
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
 
     output = StringIO()
     writer = csv.writer(output)
-
-    # CSV Header
     header = ["User ID", "Name", "Age", "Gender"] + [f"Q{i}" for i in range(1, 24)]
     writer.writerow(header)
 
-    # Fetch users and responses
     users = User.query.all()
     for user in users:
         row = [user.id, user.name, user.age, user.gender]
-
         responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
         answers = [r.answer for r in responses]
-
         while len(answers) < 23:
             answers.append("")
-
         row.extend(answers)
         writer.writerow(row)
 
     response = Response(output.getvalue(), mimetype="text/csv")
     response.headers["Content-Disposition"] = "attachment; filename=responses.csv"
     return response
+
+# -------------------- LOGOUT --------------------
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('admin_login'))
 
 # -------------------- RUN APP --------------------
 if __name__ == '__main__':
