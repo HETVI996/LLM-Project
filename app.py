@@ -4,26 +4,26 @@ from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from io import StringIO
+from functools import wraps
 import csv
 
 # -------------------- LOAD ENV VARIABLES --------------------
 load_dotenv()
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
-
-# -------------------- APP CONFIG --------------------
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a-strong-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 'postgresql://pathuser:SIH123@localhost:5432/pathdb'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize DB + Migrate
+# -------------------- DATABASE --------------------
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# -------------------- DATABASE MODELS --------------------
+# -------------------- MODELS --------------------
 class User(db.Model):
+    __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     age = db.Column(db.Integer, nullable=False)
@@ -31,10 +31,20 @@ class User(db.Model):
     responses = db.relationship('Answer', backref='user', lazy=True)
 
 class Answer(db.Model):
+    __tablename__ = "answer"
     id = db.Column(db.Integer, primary_key=True)
-    question = db.Column(db.String(255), nullable=False)  # new column
+    question = db.Column(db.String(255), nullable=False, server_default="Unknown")
     answer = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+# -------------------- ADMIN DECORATOR --------------------
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # -------------------- ROUTES --------------------
 @app.route('/')
@@ -71,31 +81,30 @@ def submit():
         gender=user_details.get('gender')
     )
     db.session.add(new_user)
-    db.session.commit()
+    db.session.commit()  # generate user id
 
+    # -------------------- SAVE ALL 23 ANSWERS --------------------
     for i in range(1, 24):
         question = f"Question {i}"
-
         if i == 9:
             keys = ['mathematics', 'any_language', 'creativity', 'management']
             ratings = {key: request.form.get(f'q9_{key}', '0') for key in keys}
-            answer = (
+            answer_text = (
                 f"Math: {ratings['mathematics']}/10, "
                 f"Language: {ratings['any_language']}/10, "
                 f"Creativity: {ratings['creativity']}/10, "
                 f"Management: {ratings['management']}/10"
             )
         else:
-            answer = request.form.get(f'q{i}_answer', '')
+            answer_text = request.form.get(f'q{i}_answer', '')  # can be empty
 
-        if answer.strip():
-            response = Answer(question=question, answer=answer, user_id=new_user.id)
-            db.session.add(response)
+        response = Answer(question=question, answer=answer_text, user_id=new_user.id)
+        db.session.add(response)
 
     db.session.commit()
     return render_template('thank_you.html')
 
-# -------------------- ADMIN LOGIN --------------------
+# -------------------- ADMIN PANEL --------------------
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     error = None
@@ -109,23 +118,18 @@ def admin_login():
             error = "Incorrect password"
     return render_template('admin_login.html', error=error)
 
-# -------------------- ADMIN DASHBOARD --------------------
-@app.route('/admin')
+# -------------------- CHANGE DASHBOARD ROUTE --------------------
+@app.route('/admin/dashboard')
+@admin_required
 def admin_dashboard():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin_login'))
-
     users = User.query.all()
     for user in users:
         user.responses = Answer.query.filter_by(user_id=user.id).order_by(Answer.id).all()
     return render_template('admin.html', users=users)
 
-# -------------------- CSV DOWNLOAD --------------------
 @app.route("/download_csv")
+@admin_required
 def download_csv():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin_login'))
-
     output = StringIO()
     writer = csv.writer(output)
     header = ["User ID", "Name", "Age", "Gender"] + [f"Q{i}" for i in range(1, 24)]
@@ -145,8 +149,8 @@ def download_csv():
     response.headers["Content-Disposition"] = "attachment; filename=responses.csv"
     return response
 
-# -------------------- LOGOUT --------------------
 @app.route('/admin/logout')
+@admin_required
 def admin_logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('admin_login'))
